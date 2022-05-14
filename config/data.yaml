@@ -1,0 +1,74 @@
+
+data_dir: data
+result_dir: results
+
+network:
+    dgl_path: dgl_hetero_ppi_50_sim_50
+    interpro: interpro.npz
+    fasta: network.fasta
+    index_map: pid2index.txt
+    diamond_db: network_db.dmnd
+
+uniprot:
+    id_map: uniprot2string.txt
+
+mf:
+    dir: mf
+    goic: mf_go_ic.txt
+    gomlb: mf_go.mlb
+
+    train:
+        goa: mf_train_go.txt
+        fasta: mf_train.fasta
+        diamond: mf_train_diamond.txt
+    
+    valid:
+        goa: mf_valid_go.txt
+        fasta: mf_valid.fasta
+        diamond: mf_valid_diamond.txt
+
+    test:
+        goa: mf_test_go.txt
+        fasta: mf_test.fasta
+        diamond: mf_test_diamond.txt
+
+bp:
+    dir: bp
+    goic: bp_go_ic.txt
+    gomlb: bp_go.mlb
+
+    train:
+        goa: bp_train_go.txt
+        fasta: bp_train.fasta
+        diamond: bp_train_diamond.txt
+    
+    valid:
+        goa: bp_valid_go.txt
+        fasta: bp_valid.fasta
+        diamond: bp_valid_diamond.txt
+
+    test:
+        goa: bp_test_go.txt
+        fasta: bp_test.fasta
+        diamond: bp_test_diamond.txt
+
+cc:
+    dir: cc
+    goic: cc_go_ic.txt
+    gomlb: cc_go.mlb
+
+    train:
+        goa: cc_train_go.txt
+        fasta: cc_train.fasta
+        diamond: cc_train_diamond.txt
+
+    valid:
+        goa: cc_valid_go.txt
+        fasta: cc_valid.fasta
+        diamond: cc_valid_diamond.txt
+
+    test:
+        goa: cc_test_go.txt
+        fasta: cc_test.fasta
+        diamond: cc_test_diamond.txt
+        
