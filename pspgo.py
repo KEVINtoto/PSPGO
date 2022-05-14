@@ -35,18 +35,11 @@ class PSPGO(nn.Module):
         nn.init.xavier_uniform_(self.output_layer.weight)
         nn.init.constant_(self.output_layer.bias, 0)
 
-    def forward(self, blocks, x, y=None, do_prop=True): 
-        # h = F.dropout(F.relu(self.embed_layer(*x) + self.embed_bias), p=self.dropout, training=self.training)
+    def forward(self, blocks, x, y=None): 
         h = F.relu(self.embed_layer(*x) + self.embed_bias)
         h = self.mlp(h)
-        i = 0
-        if do_prop:
-            for block, prop_layer in zip(blocks, self.prop_layers):
-                if i == self.n_prop_step - 1:
-                    h, y = prop_layer(block, h, y, printattn = True)
-                else:
-                    h, y = prop_layer(block, h, y)
-                i += 1
+        for block, prop_layer in zip(blocks, self.prop_layers):
+            h, y = prop_layer(block, h, y)
         h = self.output_layer(h)
         return h, y
 
@@ -98,15 +91,15 @@ class PropagateLayer(nn.Module):
         self.residual = residual
         self.activation = activation
 
-    def forward(self, block: DGLHeteroGraph, x, y, printattn = False):
+    def forward(self, block: DGLHeteroGraph, x, y):
         with block.local_scope():
 
             block_i = block['interaction']
             block_s = block['similarity']
 
             if self.share_weight:
-                h_i, a_i = self.gat(block_i, x, printattn=printattn)
-                h_s, a_s = self.gat(block_s, x, printattn=printattn)
+                h_i, a_i = self.gat(block_i, x)
+                h_s, a_s = self.gat(block_s, x)
             else:
                 h_i, a_i = self.gat_i(block_i, x)
                 h_s, a_s = self.gat_s(block_s, x)
@@ -133,46 +126,6 @@ class PropagateLayer(nn.Module):
                 y_hat[dst_flag] = y0
             else:
                 y_hat = y
-
-            # ablation: without sim
-            # block_i = block['interaction']
-            # h_i, a_i = self.gat(block_i, x)
-            # h = self.activation(h_i)
-            # h = self.feat_drop(h)
-            # block_i.edata['a'] = a_i
-            # dst_flag = block.dstdata['flag']
-            # y0 = y[:block.number_of_dst_nodes()][dst_flag]
-            # block_i.srcdata.update({'y': y})
-            # block_i.update_all(fn.u_mul_e('y', 'a', 'm'),
-            #                     fn.sum('m', 'y_hat'))
-            # y_hat_i = block_i.dstdata.pop('y_hat')
-            # y_hat = F.normalize(y_hat_i)
-            # y_hat[dst_flag] = y0
-
-            # static prpagation
-            # block_i = block['interaction']
-            # block_s = block['similarity']
-            # h_i = self.gat(block_i, x)
-            # h_s = self.gat(block_s, x)
-            # h = h_i + h_s
-            # h = self.activation(h)
-            # h = self.feat_drop(h)
-            # # label propagate
-            # if y != None:
-            #     dst_flag = block.dstdata['flag']
-            #     y0 = y[:block.number_of_dst_nodes()][dst_flag]
-            #     block_i.srcdata.update({'y': y})
-            #     block_i.update_all(fn.u_mul_e('y', 'weight', 'm'),
-            #                        fn.sum('m', 'y_hat'))
-            #     y_hat_i = block_i.dstdata.pop('y_hat')
-            #     block_s.srcdata.update({'y': y})
-            #     block_s.update_all(fn.u_mul_e('y', 'weight', 'm'),
-            #                        fn.sum('m', 'y_hat'))
-            #     y_hat_s = block_s.dstdata.pop('y_hat')
-            #     y_hat = F.normalize(y_hat_i + y_hat_s)
-            #     y_hat[dst_flag] = y0
-            # else:
-            #     y_hat = y
 
             return h, y_hat
 
@@ -281,7 +234,7 @@ class GATv2Conv(nn.Module):
                 nn.init.constant_(self.res_fc.bias, 0)
 
 
-    def forward(self, graph: DGLHeteroGraph, feat, get_attention=True, printattn = False):
+    def forward(self, graph: DGLHeteroGraph, feat, get_attention=True):
         with graph.local_scope():
             if isinstance(feat, tuple):
                 h_src = self.feat_drop(feat[0])
@@ -319,29 +272,10 @@ class GATv2Conv(nn.Module):
             # activation
             if self.activation:
                 rst = self.activation(rst)
-            if printattn:
-                print()
-                print('attn: ', graph.edata['a'].mean(1).flatten())
-                print('weight: ', graph.edata['weight'])
-                print('edges: ', graph.edges())
-                print('src id: ', graph.srcdata['_ID'])
-                print('dst id: ', graph.dstdata['_ID'])
 
             if get_attention:
                 return rst.mean(1), graph.edata['a'].mean(1)
             else:
                 return rst.mean(1)
 
-            # static propagation
-            # graph.srcdata.update({'el': feat_src.mean(1)})# (num_src_edge, num_heads, out_dim)
-            # graph.update_all(fn.u_mul_e('el', 'weight', 'm'),
-            #                  fn.sum('m', 'ft'))
-            # rst = graph.dstdata['ft']
-            # # residual
-            # if self.res_fc is not None:
-            #     rst = rst + h_dst
-            # # activation
-            # if self.activation:
-            #     rst = self.activation(rst)
-            # return rst
             
