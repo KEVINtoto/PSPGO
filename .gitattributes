@@ -1,0 +1,15 @@
+tmp.py filter=lfs diff=lfs merge=lfs -text
+train_model.sh filter=lfs diff=lfs merge=lfs -text
+config filter=lfs diff=lfs merge=lfs -text
+data filter=lfs diff=lfs merge=lfs -text
+evaluate.py filter=lfs diff=lfs merge=lfs -text
+pspgo_new.py filter=lfs diff=lfs merge=lfs -text
+README.md filter=lfs diff=lfs merge=lfs -text
+results filter=lfs diff=lfs merge=lfs -text
+metrics.py filter=lfs diff=lfs merge=lfs -text
+models filter=lfs diff=lfs merge=lfs -text
+uniprot2string_old.txt filter=lfs diff=lfs merge=lfs -text
+utils.py filter=lfs diff=lfs merge=lfs -text
+predict.py filter=lfs diff=lfs merge=lfs -text
+pspgo.py filter=lfs diff=lfs merge=lfs -text
+train.py filter=lfs diff=lfs merge=lfs -text
