@@ -1,9 +1,13 @@
+## Download and Decompress
+
 The data zip may need to be downloaded manually by clicking on: [https://github.com/KEVINtoto/PSPGO/raw/main/data/data.tar.bz2](https://github.com/KEVINtoto/PSPGO/raw/main/data/data.tar.bz2).
 
 Run the following command to decompress:
 ```
 tar -jxv -f data.tar.bz2 -C data
 ```
+
+## Description
 
 The files in the `data` directory are:
  * `dgl_hetero_ppi_50_sim_50`: The `DGLHeteroGraph` contains two types of networks, a PPI network constructed from the raw network data obtained from STRING (sampling the 50 edges with the largest weights for each node), and a sequence similarity network constructed after sequence alignment by Diamond (also sampling the 50 edges with the largest weights for each node).
