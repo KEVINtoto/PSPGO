@@ -4,7 +4,7 @@ This is the code repository for protein automatic function prediction model PSPG
 
 **PSPGO** is a cross-species heterogeneous network propagation model, which can **P**ropagate feature and label information on **S**equence similarity (SS) network and **P**PI network for predicting **G**ene **O**ntology terms. The model is evaluated on a large multi-species dataset split based on time, and is compared with several state-of-the-art methods. The results show that PSPGO not only has good performance on multi-species test set but also performs well in prediction for single species.
 
-<div align=center><img width="300" alt="image" src="https://user-images.githubusercontent.com/34743589/168454793-1445c76b-cd5c-47a7-b345-08fb7dd49e54.png"></div>
+<div align=center><img width="400" alt="network" src="https://user-images.githubusercontent.com/34743589/168454793-1445c76b-cd5c-47a7-b345-08fb7dd49e54.png"></div>
 
 # Dependencies
 * The code was developed and tested using python 3.8.
@@ -12,11 +12,30 @@ This is the code repository for protein automatic function prediction model PSPG
 * The version of CUDA is `cudatoolkit==11.3.1`
 
 # Data
-<img width="147" alt="截屏2022-05-15 11 04 00" src="https://user-images.githubusercontent.com/34743589/168455604-1747f347-e0ac-42d2-b1a2-3cbb2b5abc08.png"><img width="181" alt="截屏2022-05-15 11 03 18" src="https://user-images.githubusercontent.com/34743589/168455610-a16fe1d5-00cc-4b58-ad64-07b86b0de58e.png"><img width="152" alt="截屏2022-05-15 11 06 14" src="https://user-images.githubusercontent.com/34743589/168455612-a71213d2-3ee4-4453-aceb-7693255e8383.png"><img width="188" alt="截屏2022-05-15 11 06 35" src="https://user-images.githubusercontent.com/34743589/168455614-907665c4-b16a-4bdb-9597-4814f772be21.png">
+<div align=center><img width="147" alt="uniprot" src="https://user-images.githubusercontent.com/34743589/168455684-0cc53a92-874e-4c2e-9c2a-dcfbd36fb798.png"><img width="175" alt="string" src="https://user-images.githubusercontent.com/34743589/168455685-368d0af3-5b41-4ba8-8f02-36bfcbcd3a24.png"><img width="143" alt="goa" src="https://user-images.githubusercontent.com/34743589/168455693-246a738e-b04b-4496-a632-afbeb36d239e.png"><img width="206" alt="go" src="https://user-images.githubusercontent.com/34743589/168455695-c733fbf1-fcab-4cc5-92e2-272fd7abe88b.png"></div>
 
+\
 The protein data used are:
-* Sequence: download from the (UniProt website)[https://www.uniprot.org/].
-* PPI Network: download from the (STRING website)[https://string-db.org/].
-* Annotation: download from the (GOA website)[https://www.ebi.ac.uk/GOA/].
-* Gene Ontology: download from the (GO website)[http://geneontology.org/].
+* Sequence: download from the [UniProt website](https://www.uniprot.org/).
+* PPI Network: download from the [STRING website](https://string-db.org/).
+* Annotation: download from the [GOA website](https://www.ebi.ac.uk/GOA/).
+* Gene Ontology: download from the [GO website](http://geneontology.org/).
+
 For a detailed description of data files, please see [here](data/README.md).
+
+# Usage
+For developers, run the `train.py` script to train the model (e.g. for BPO):
+```
+python train.py --ontology bp
+```
+For user, run the `predict.py` script to make predictions about the input file (e.g. for MFO):
+```
+python predict.py --ontology mf -f ${input file path}
+```
+If no input file is specified, the test data from the corresponding ontology will be used for prediction by default.
+\
+\
+For the evaluation of the model, run the `evaluate.py` script (e.g. for CCO):
+```
+python evaluate.py --ontology cc
+```
