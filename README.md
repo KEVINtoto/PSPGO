@@ -6,12 +6,12 @@ This is the code repository for protein automatic function prediction model PSPG
 
 <div align=center><img width="400" alt="network" src="https://user-images.githubusercontent.com/34743589/168456432-0fb12024-9997-4cdc-894d-966c4cf15328.png"></div>
 
-# Dependencies
+## Dependencies
 * The code was developed and tested using python 3.8.
 * To install python dependencies run: `pip install -r requirements.txt`. Some libraries may need to be installed via conda.
 * The version of CUDA is `cudatoolkit==11.3.1`
 
-# Data
+## Data
 <div align=center><img width="147" alt="uniprot" src="https://user-images.githubusercontent.com/34743589/168455684-0cc53a92-874e-4c2e-9c2a-dcfbd36fb798.png"><img width="175" alt="string" src="https://user-images.githubusercontent.com/34743589/168455685-368d0af3-5b41-4ba8-8f02-36bfcbcd3a24.png"><img width="143" alt="goa" src="https://user-images.githubusercontent.com/34743589/168455693-246a738e-b04b-4496-a632-afbeb36d239e.png"><img width="206" alt="go" src="https://user-images.githubusercontent.com/34743589/168455695-c733fbf1-fcab-4cc5-92e2-272fd7abe88b.png"></div>
 
 \
@@ -23,7 +23,7 @@ The protein data used are:
 
 For a detailed description of data files, please see [here](data/README.md).
 
-# Usage
+## Usage
 For developers, run the `train.py` script to train the model (e.g. for BPO):
 ```
 python train.py --ontology bp
