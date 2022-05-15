@@ -24,18 +24,18 @@ The protein data used are:
 For a detailed description of data files, please see [here](data/README.md).
 
 ## Usage
-For developers, run the `train.py` script to train the model (e.g. for BPO):
+Run the `train.py` script to train the model (e.g. for BPO):
 ```
 python train.py --ontology bp
 ```
-For user, run the `predict.py` script to make predictions about the input file (e.g. for MFO):
+Run the `predict.py` script to make predictions about the input file (e.g. for MFO):
 ```
 python predict.py --ontology mf -f ${input file path}
 ```
 If no input file is specified, the test data from the corresponding ontology will be used for prediction by default.
 \
 \
-For the evaluation of the model, run the `evaluate.py` script (e.g. for CCO):
+For evaluation of model, run the `evaluate.py` script (e.g. for CCO):
 ```
 python evaluate.py --ontology cc
 ```
