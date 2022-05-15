@@ -4,12 +4,8 @@ import os
 from logzero import logger
 import joblib
 import subprocess
-from scipy.sparse.csr import csr_matrix
 from sklearn.preprocessing import MultiLabelBinarizer
 import numpy as np
-import dgl
-import torch
-from tqdm import trange
 from Bio import SeqIO
 
 

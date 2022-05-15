@@ -10,4 +10,5 @@ scikit-learn==1.0.2
 scipy==1.7.3
 torch==1.10.0
 tqdm==4.62.3
-
+diamond==2.0.14
+cudatoolkit==11.3.1

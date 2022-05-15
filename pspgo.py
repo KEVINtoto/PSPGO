@@ -83,10 +83,10 @@ class PropagateLayer(nn.Module):
         self.out_dim = out_dim
         self.share_weight = share_weight
         if share_weight:
-            self.gat = GATv2Conv(in_dim, out_dim, attn_heads, feat_drop=feat_drop, attn_drop=attn_drop, residual=residual)
+            self.gat = GraphAttention(in_dim, out_dim, attn_heads, feat_drop=feat_drop, attn_drop=attn_drop, residual=residual)
         else:
-            self.gat_i = GATv2Conv(in_dim, out_dim, attn_heads, feat_drop=feat_drop, attn_drop=attn_drop, residual=residual)
-            self.gat_s = GATv2Conv(in_dim, out_dim, attn_heads, feat_drop=feat_drop, attn_drop=attn_drop, residual=residual)
+            self.gat_p = GraphAttention(in_dim, out_dim, attn_heads, feat_drop=feat_drop, attn_drop=attn_drop, residual=residual)
+            self.gat_s = GraphAttention(in_dim, out_dim, attn_heads, feat_drop=feat_drop, attn_drop=attn_drop, residual=residual)
         self.feat_drop = nn.Dropout(feat_drop)
         self.residual = residual
         self.activation = activation
@@ -94,30 +94,29 @@ class PropagateLayer(nn.Module):
     def forward(self, block: DGLHeteroGraph, x, y):
         with block.local_scope():
 
-            block_i = block['interaction']
+            block_p = block['interaction']
             block_s = block['similarity']
 
             if self.share_weight:
-                h_i, a_i = self.gat(block_i, x)
+                h_p, a_p = self.gat(block_p, x)
                 h_s, a_s = self.gat(block_s, x)
             else:
-                h_i, a_i = self.gat_i(block_i, x)
+                h_p, a_p = self.gat_p(block_p, x)
                 h_s, a_s = self.gat_s(block_s, x)
 
-            h = h_i + h_s
-            h = self.activation(h)
+            h = self.activation(h_p + h_s)
             h = self.feat_drop(h)
 
             # label propagate
             if y != None:
-                block_i.edata['a'] = a_i
+                block_p.edata['a'] = a_p
                 block_s.edata['a'] = a_s
                 dst_flag = block.dstdata['flag']
                 y0 = y[:block.number_of_dst_nodes()][dst_flag]
-                block_i.srcdata.update({'y': y})
-                block_i.update_all(fn.u_mul_e('y', 'a', 'm'),
+                block_p.srcdata.update({'y': y})
+                block_p.update_all(fn.u_mul_e('y', 'a', 'm'),
                                    fn.sum('m', 'y_hat'))
-                y_hat_i = block_i.dstdata.pop('y_hat')
+                y_hat_i = block_p.dstdata.pop('y_hat')
                 block_s.srcdata.update({'y': y})
                 block_s.update_all(fn.u_mul_e('y', 'a', 'm'),
                                    fn.sum('m', 'y_hat'))
@@ -130,7 +129,79 @@ class PropagateLayer(nn.Module):
             return h, y_hat
 
 
+class GraphAttention(nn.Module):
+    def __init__(self,
+                 in_feats, out_feats, num_heads,
+                 feat_drop=0., attn_drop=0.,
+                 negative_slope=0.2, residual=False, activation=None):
+        super(GraphAttention, self).__init__()
+        self._num_heads = num_heads
+        self._in_src_feats, self._in_dst_feats = expand_as_pair(in_feats)
+        self._out_feats = out_feats
+        self.fc_src = nn.Linear(
+            self._in_src_feats, out_feats * num_heads)
+        self.fc_dst = nn.Linear(
+            self._in_src_feats, out_feats * num_heads)
+        self.attn = nn.Parameter(th.FloatTensor(size=(1, num_heads, out_feats)))
+        self.feat_drop = nn.Dropout(feat_drop)
+        self.attn_drop = nn.Dropout(attn_drop)
+        self.leaky_relu = nn.LeakyReLU(negative_slope)
+        if residual:
+            if self._in_dst_feats != out_feats * num_heads:
+                self.res_fc = nn.Linear(
+                    self._in_dst_feats, num_heads * out_feats)
+            else:
+                self.res_fc = Identity()
+        else:
+            self.register_buffer('res_fc', None)
+        self.activation = activation
+        self.reset_parameters()
 
+    def reset_parameters(self):
+        gain = nn.init.calculate_gain('relu')
+        nn.init.xavier_normal_(self.fc_src.weight, gain=gain)
+        nn.init.constant_(self.fc_src.bias, 0)
+        nn.init.xavier_normal_(self.fc_dst.weight, gain=gain)
+        nn.init.constant_(self.fc_dst.bias, 0)
+        nn.init.xavier_normal_(self.attn, gain=gain)
+        if isinstance(self.res_fc, nn.Linear):
+            nn.init.xavier_normal_(self.res_fc.weight, gain=gain)
+            if self.bias:
+                nn.init.constant_(self.res_fc.bias, 0)
+
+    def forward(self, graph: DGLHeteroGraph, feat):
+        with graph.local_scope():
+            h_src = h_dst = self.feat_drop(feat)
+            feat_src = self.fc_src(h_src).view(
+                -1, self._num_heads, self._out_feats)
+            feat_dst = self.fc_dst(h_src).view(
+                 -1, self._num_heads, self._out_feats)
+            if graph.is_block:
+                feat_dst = feat_src[:graph.number_of_dst_nodes()]
+                h_dst = h_dst[:graph.number_of_dst_nodes()]
+
+            graph.srcdata.update({'el': feat_src}) # (num_src_edge, num_heads, out_dim)
+            graph.dstdata.update({'er': feat_dst})
+            graph.apply_edges(fn.u_add_v('el', 'er', 'e'))
+            e = self.leaky_relu(graph.edata.pop('e')) # (num_src_edge, num_heads, out_dim)
+            e = (e * self.attn).sum(dim=-1).unsqueeze(dim=2) # (num_edge, num_heads, 1)
+            # compute softmax
+            graph.edata['a'] = self.attn_drop(edge_softmax(graph, e)) # (num_edge, num_heads)
+            # feature propagation
+            graph.update_all(fn.u_mul_e('el', 'a', 'm'),
+                             fn.sum('m', 'ft'))
+            rst = graph.dstdata['ft']
+            # residual
+            if self.res_fc is not None:
+                resval = self.res_fc(h_dst).view(h_dst.shape[0], -1, self._out_feats)
+                rst = rst + resval
+            # activation
+            if self.activation:
+                rst = self.activation(rst)
+
+            return rst.mean(1), graph.edata['a'].mean(1)
+
+            
 class MLP(nn.Module):
     def __init__(self, input_d, hidden_d, output_d, 
                  num_layers, dropout, norm = 'layer'):
@@ -169,113 +240,3 @@ class MLP(nn.Module):
             x = F.dropout(x, self.dropout, training=self.training)
 
         return x
-
-
-
-class GATv2Conv(nn.Module):
-    def __init__(self,
-                 in_feats,
-                 out_feats,
-                 num_heads,
-                 feat_drop=0.,
-                 attn_drop=0.,
-                 negative_slope=0.2,
-                 residual=False,
-                 activation=None,
-                 bias=True,
-                 share_weights=False):
-        super(GATv2Conv, self).__init__()
-        self._num_heads = num_heads
-        self._in_src_feats, self._in_dst_feats = expand_as_pair(in_feats)
-        self._out_feats = out_feats
-        if isinstance(in_feats, tuple):
-            self.fc_src = nn.Linear(
-                self._in_src_feats, out_feats * num_heads, bias=bias)
-            self.fc_dst = nn.Linear(
-                self._in_dst_feats, out_feats * num_heads, bias=bias)
-        else:
-            self.fc_src = nn.Linear(
-                self._in_src_feats, out_feats * num_heads, bias=bias)
-            if share_weights:
-                self.fc_dst = self.fc_src
-            else:
-                self.fc_dst = nn.Linear(
-                    self._in_src_feats, out_feats * num_heads, bias=bias)
-        self.attn = nn.Parameter(th.FloatTensor(size=(1, num_heads, out_feats)))
-        self.feat_drop = nn.Dropout(feat_drop)
-        self.attn_drop = nn.Dropout(attn_drop)
-        self.leaky_relu = nn.LeakyReLU(negative_slope)
-        if residual:
-            if self._in_dst_feats != out_feats * num_heads:
-                self.res_fc = nn.Linear(
-                    self._in_dst_feats, num_heads * out_feats, bias=bias)
-            else:
-                self.res_fc = Identity()
-        else:
-            self.register_buffer('res_fc', None)
-        self.activation = activation
-        self.share_weights = share_weights
-        self.bias = bias
-        self.reset_parameters()
-
-    def reset_parameters(self):
-        gain = nn.init.calculate_gain('relu')
-        nn.init.xavier_normal_(self.fc_src.weight, gain=gain)
-        if self.bias:
-            nn.init.constant_(self.fc_src.bias, 0)
-        if not self.share_weights:
-            nn.init.xavier_normal_(self.fc_dst.weight, gain=gain)
-            if self.bias:
-                nn.init.constant_(self.fc_dst.bias, 0)
-        nn.init.xavier_normal_(self.attn, gain=gain)
-        if isinstance(self.res_fc, nn.Linear):
-            nn.init.xavier_normal_(self.res_fc.weight, gain=gain)
-            if self.bias:
-                nn.init.constant_(self.res_fc.bias, 0)
-
-
-    def forward(self, graph: DGLHeteroGraph, feat, get_attention=True):
-        with graph.local_scope():
-            if isinstance(feat, tuple):
-                h_src = self.feat_drop(feat[0])
-                h_dst = self.feat_drop(feat[1])
-                feat_src = self.fc_src(h_src).view(-1, self._num_heads, self._out_feats)
-                feat_dst = self.fc_dst(h_dst).view(-1, self._num_heads, self._out_feats)
-            else:
-                h_src = h_dst = self.feat_drop(feat)
-                feat_src = self.fc_src(h_src).view(
-                    -1, self._num_heads, self._out_feats)
-                if self.share_weights:
-                    feat_dst = feat_src
-                else:
-                    feat_dst = self.fc_dst(h_src).view(
-                        -1, self._num_heads, self._out_feats)
-                if graph.is_block:
-                    feat_dst = feat_src[:graph.number_of_dst_nodes()]
-                    h_dst = h_dst[:graph.number_of_dst_nodes()]
-
-            graph.srcdata.update({'el': feat_src})# (num_src_edge, num_heads, out_dim)
-            graph.dstdata.update({'er': feat_dst})
-            graph.apply_edges(fn.u_add_v('el', 'er', 'e'))
-            e = self.leaky_relu(graph.edata.pop('e'))# (num_src_edge, num_heads, out_dim)
-            e = (e * self.attn).sum(dim=-1).unsqueeze(dim=2)# (num_edge, num_heads, 1)
-            # compute softmax
-            graph.edata['a'] = self.attn_drop(edge_softmax(graph, e)) # (num_edge, num_heads)
-            # message passing
-            graph.update_all(fn.u_mul_e('el', 'a', 'm'),
-                             fn.sum('m', 'ft'))
-            rst = graph.dstdata['ft']
-            # residual
-            if self.res_fc is not None:
-                resval = self.res_fc(h_dst).view(h_dst.shape[0], -1, self._out_feats)
-                rst = rst + resval
-            # activation
-            if self.activation:
-                rst = self.activation(rst)
-
-            if get_attention:
-                return rst.mean(1), graph.edata['a'].mean(1)
-            else:
-                return rst.mean(1)
-
-            

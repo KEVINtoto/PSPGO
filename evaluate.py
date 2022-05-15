@@ -1,11 +1,8 @@
 
 
 import argparse
-
-from dgl.utils import data
 from utils import get_mlb, get_pred_matrix, get_pid_and_label_list, get_go_ic
 from logzero import logger
-import numpy as np
 from metrics import compute_metrics
 import yaml
 import os

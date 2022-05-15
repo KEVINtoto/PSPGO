@@ -57,23 +57,33 @@ def train(args, dataset):
                 logger.info("Epoch {:04d} | Batch {:04d} | Train Loss: {:.4f} | Time: {:.4f}".
                         format(epoch, i, loss.item(), time.time() - batch_tic))
         # eval
-        valid_x_score, valid_y_score = model.inference(g, valid_idx, feature_matrix, label_matrix, args.batch_size, device)
-        (fmax_, smin_, threshold), aupr_ = compute_metrics(valid_y, valid_x_score, go_ic, label_classes)
+        model.eval()
+        unique_idx = np.unique(valid_idx)
+        index_mapping = {idx: i for i, idx in enumerate(unique_idx)}
+        res_idx = np.asarray([ index_mapping[idx] for idx in valid_idx ])
+        valid_dataloader = dgl.dataloading.NodeDataLoader(g, unique_idx, sampler, device='cpu',
+                                     batch_size=args.batch_size, shuffle=False, num_workers=0,  drop_last=False)
+        pred_list = []
+        for input_nodes, _, blocks in valid_dataloader:
+            blocks = [blk.to(device) for blk in blocks]
+            batch_x = ( th.from_numpy(feature_matrix[input_nodes.numpy()].indices).long().to(device), 
+                        th.from_numpy(feature_matrix[input_nodes.numpy()].indptr).long().to(device), 
+                        th.from_numpy(feature_matrix[input_nodes.numpy()].data).float().to(device) )  
+            batch_pred, _ = model(blocks, batch_x)
+            pred_list.append(th.sigmoid(batch_pred).cpu().detach().numpy())
+        valid_pred = np.vstack(pred_list)[res_idx]
+        (fmax_, smin_, threshold), aupr_ = compute_metrics(valid_y, valid_pred, go_ic, label_classes)
         logger.info("Epoch {:04d} | Valid X Fmax: {:.4f} | Smin: {:.4f} | threshold: {:.2f} | AUPR: {:.4f}  Time: {:.4f} ".
                     format(epoch, fmax_, smin_, threshold, aupr_, time.time() - t0))
         if fmax_ > best_fmax:
             logger.info(F'improved from {best_fmax} to {fmax_}, save model.')
             best_fmax = fmax_
             th.save(model.state_dict(), os.path.join(args.model_dir, F"{args.ontology}_{args.model}_{args.model_id}.ckp"))
-        (fmax_, smin_, threshold), aupr_ = compute_metrics(valid_y, valid_y_score, go_ic, label_classes)
-        logger.info("Epoch {:04d} | Valid Y Fmax: {:.4f} | Smin: {:.4f} | threshold: {:.2f} | AUPR: {:.4f}  Time: {:.4f} ".
-                    format(epoch, fmax_, smin_, threshold, aupr_, time.time() - t0))
-
 
 
 def main(args):
     # load config 
-    with open('./config/pspgo.yaml', 'r', encoding='UTF-8') as f:
+    with open('./config/data.yaml', 'r', encoding='UTF-8') as f:
         config = yaml.load(f, yaml.FullLoader)
     data_dir = config['data_dir']
     ont = args.ontology
@@ -127,11 +137,13 @@ def main(args):
     dataset['goic'], dataset['label_classes'] = go_ic, label_classes
 
     logger.info("Data loading is complete.")
+    
+    if not os.path.exists(args.model_dir):
+        os.mkdir(args.model_dir)
 
     logger.info("Start training...")
     train(args, dataset)
-    logger.info('Finished train.')
-    logger.info("###########################################################################################################")
+    logger.info('Finished train.\n')
     
 
 if __name__ == '__main__':
@@ -174,19 +186,19 @@ if __name__ == '__main__':
                         help='path for save the model parameters')
     
     args = parser.parse_args()
-    logger.info("###########################################################################################################")
+
     logger.info("Running the training script for PSPGO model.")
     logger.info(F"Ontology: {args.ontology}")
     logger.info(F"Hyperparameters: ")
-    logger.info(F"\t*\tTraining epoch: {args.n_epochs}")
-    logger.info(F"\t*\tBatch size: {args.batch_size}")
-    logger.info(F"\t*\tLearning rate: {args.lr}")
-    logger.info(F"\t*\tMLP layers: {args.n_mlp_layers}")
-    logger.info(F"\t*\tPropagation layers: {args.n_prop_steps}")
-    logger.info(F"\t*\Attention heads: {args.attn_heads}")
-    logger.info(F"\t*\MLP dropout: {args.mlp_dropout}")
-    logger.info(F"\t*\Feature dropout: {args.feat_dropout}")
-    logger.info(F"\t*\Attention dropout: {args.attn_dropout}")
+    logger.info(F"\t* Training epoch: {args.n_epochs}")
+    logger.info(F"\t* Batch size: {args.batch_size}")
+    logger.info(F"\t* Learning rate: {args.lr}")
+    logger.info(F"\t* MLP layers: {args.n_mlp_layers}")
+    logger.info(F"\t* Propagation layers: {args.n_prop_steps}")
+    logger.info(F"\t* Attention heads: {args.attn_heads}")
+    logger.info(F"\t* MLP dropout: {args.mlp_dropout}")
+    logger.info(F"\t* Feature dropout: {args.feat_dropout}")
+    logger.info(F"\t* Attention dropout: {args.attn_dropout}")
     main(args)
 
 

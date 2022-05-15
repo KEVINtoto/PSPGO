@@ -52,6 +52,7 @@ def main(args):
         model_config = yaml.load(f, yaml.FullLoader)
     model_dir = model_config['model_dir']
 
+    make_diamond_db(os.path.join(data_dir, data_config['network']['fasta']), os.path.join(data_dir, data_config['network']['diamond_db']))
     if args.input_file == None:
         pred_pid_list = get_pid_list(os.path.join(data_dir, data_config[ont]['dir'], data_config[ont]['test']['fasta']))
         pred_diamond_result  = diamond_homo(os.path.join(data_dir, data_config['network']['diamond_db']),
@@ -78,20 +79,20 @@ def main(args):
             ct += 1
     logger.info(F"There are {ct} proteins that don't have network index.")
 
-    logger.info('Load trained model.')
     device = 'cpu'
     if args.gpu >= 0 and th.cuda.is_available():
         device = 'cuda:%d' % args.gpu
 
     pred_x_score_list, pred_y_score_list = list(), list()
     n_models = model_config['n_models']
+    logger.info('Start predict......')
+    logger.info('Load trained model.')
     for model_id in np.arange(n_models):
         model = PSPGO(feature_matrix.shape[1], model_config['n_hidden'], label_matrix.shape[1],
                 model_config['n_mlp_layers'], model_config['n_prop_steps'], mlp_drop=model_config['mlp_dropout'],
                 attn_heads=model_config['attn_heads'], feat_drop=model_config['feat_dropout'], attn_drop=model_config['attn_dropout'],
                 residual=model_config['residual'], share_weight=model_config['share_weight']).to(device)
         model.load_state_dict(th.load(os.path.join(model_dir, F'{args.ontology}_{args.model}_{model_id}.ckp'))) 
-        logger.info('Start predict......')
         test_x_score, test_y_score = model.inference(g, pred_index, feature_matrix, label_matrix, model_config['batch_size'], device)
         pred_x_score_list.append(test_x_score)
         pred_y_score_list.append(test_y_score)
@@ -100,6 +101,9 @@ def main(args):
     pred_combine_score = ( alpha * pred_x_score_list[0] + (1 - alpha) * pred_y_score_list[0] ) / n_models
     for i in np.arange(1, n_models):
         pred_combine_score +=  (alpha * pred_x_score_list[i] + (1 - alpha) * pred_y_score_list[i]) / n_models
+
+    if not os.path.exists(result_dir):
+        os.mkdir(result_dir)
 
     if args.input_file == None:
         with open(os.path.join(result_dir, F'{ont}_test_{args.model}_prediction.txt'), 'w') as f:
@@ -111,8 +115,7 @@ def main(args):
             for i in range(pred_combine_score.shape[0]):
                 for j in range(pred_combine_score.shape[1]):
                     f.write(F'{tmp_pid_list[i]}\t{label_classes[j]}\t{pred_combine_score[i, j]}\n')
-    logger.info(F'Finished save predicted result.')
-    logger.info("###########################################################################################################")
+    logger.info(F'Finished save predicted result.\n')
 
 
 if __name__ == '__main__':
@@ -127,7 +130,6 @@ if __name__ == '__main__':
                         help="The fasta file path of the protein that needs to be predicted.")
 
     args = parser.parse_args()
-    logger.info("###########################################################################################################")
     logger.info("Running the PSPGO model for prediction.")
     logger.info(F"Ontology: {args.ontology}")
     logger.info(F"The input FASTA file path: {args.input_file}")
