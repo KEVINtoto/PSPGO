@@ -15,7 +15,7 @@ This is the code repository for protein automatic function prediction model PSPG
 <div align=center><img width="147" alt="uniprot" src="https://user-images.githubusercontent.com/34743589/168455684-0cc53a92-874e-4c2e-9c2a-dcfbd36fb798.png"><img width="175" alt="string" src="https://user-images.githubusercontent.com/34743589/168455685-368d0af3-5b41-4ba8-8f02-36bfcbcd3a24.png"><img width="143" alt="goa" src="https://user-images.githubusercontent.com/34743589/168455693-246a738e-b04b-4496-a632-afbeb36d239e.png"><img width="206" alt="go" src="https://user-images.githubusercontent.com/34743589/168455695-c733fbf1-fcab-4cc5-92e2-272fd7abe88b.png"></div>
 
 \
-The protein data used are:
+The data used are:
 * Sequence: download from the [UniProt website](https://www.uniprot.org/).
 * PPI Network: download from the [STRING website](https://string-db.org/).
 * Annotation: download from the [GOA website](https://www.ebi.ac.uk/GOA/).
