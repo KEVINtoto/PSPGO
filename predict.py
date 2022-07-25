@@ -13,9 +13,6 @@ from pspgo import PSPGO
 import yaml
 
 
-# alphas = {'mf': 0.6, 'cc': 0.9, 'bp': 0.2}
-
-
 def main(args):
     # load data config 
     with open('./config/data.yaml', 'r', encoding='UTF-8') as f:
