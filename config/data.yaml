@@ -3,7 +3,7 @@ data_dir: data
 result_dir: results
 
 network:
-    dgl_path: dgl_hetero_ppi_50_sim_50
+    dgl_path: dgl_hetero_50_1e_4
     interpro: interpro.npz
     fasta: network.fasta
     index_map: pid2index.txt
