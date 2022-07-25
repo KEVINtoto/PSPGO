@@ -14,6 +14,6 @@ attn_heads: 1
 share_weight: True
 
 alphas:
-  bp: 0.2
-  mf: 0.6
+  bp: 0.3
+  mf: 0.4
   cc: 0.9
