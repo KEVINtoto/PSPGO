@@ -2,7 +2,7 @@
 
 This is the code repository for protein automatic function prediction model PSPGO. 
 
-**PSPGO** is a (~~Protein Station Portable for GO~~) cross-species heterogeneous network propagation model, which can **P**ropagate feature and label information on **S**equence similarity (SS) network and **P**PI network for predicting **G**ene **O**ntology terms. The model is evaluated on a large multi-species dataset split based on time, and is compared with several state-of-the-art methods. The results show that PSPGO not only has good performance on multi-species test set but also performs well in prediction for single species.
+**PSPGO** is a (~~Protein Station Portable for GO~~) cross-species heterogeneous network propagation model, which can **P**ropagate feature and label information on **S**equence similarity (SS) network and **P**PI network for predicting **G**ene **O**ntology terms.
 
 <div align=center><img width="400" alt="network" src="https://user-images.githubusercontent.com/34743589/168456432-0fb12024-9997-4cdc-894d-966c4cf15328.png"></div>
 
@@ -40,3 +40,5 @@ For evaluation of model, run the `evaluate.py` script (e.g. for CCO):
 python evaluate.py --ontology cc
 ```
 
+## References
+[Kaitao Wu, Lexiang Wang, Bo Liu, Yang Liu, Yadong Wang and Junyi Li. PSPGO: Cross-Species Heterogeneous Network Propagation for Protein Function Prediction. IEEE/ACM Transactions on Computational Biology and Bioinformatics. DOI: 10.1109/TCBB.2022.3215257](https://doi.org/10.1109/TCBB.2022.3215257)
