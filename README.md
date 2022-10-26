@@ -41,4 +41,4 @@ python evaluate.py --ontology cc
 ```
 
 ## References
-[Kaitao Wu, Lexiang Wang, Bo Liu, Yang Liu, Yadong Wang and Junyi Li. PSPGO: Cross-Species Heterogeneous Network Propagation for Protein Function Prediction. IEEE/ACM Transactions on Computational Biology and Bioinformatics. DOI: 10.1109/TCBB.2022.3215257](https://doi.org/10.1109/TCBB.2022.3215257)
+Kaitao Wu, Lexiang Wang, Bo Liu, Yang Liu, Yadong Wang and Junyi Li. PSPGO: Cross-Species Heterogeneous Network Propagation for Protein Function Prediction. IEEE/ACM Transactions on Computational Biology and Bioinformatics. DOI: [10.1109/TCBB.2022.3215257](https://doi.org/10.1109/TCBB.2022.3215257)
